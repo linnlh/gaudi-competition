@@ -1,0 +1,2 @@
+# gaudi-competition
+CCF contest
