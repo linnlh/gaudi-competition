@@ -1,5 +1,6 @@
 import abc
 import numpy as np
+import json
 
 from typing import List, Tuple, Dict, Type, Callable, Any
 from transformers import PreTrainedTokenizer, AutoTokenizer
@@ -41,9 +42,10 @@ class DatasetRegistry:
     def get_dataset(cls, name: str) -> Type[DatasetBase]:
         """根据名称获取数据集"""
 
-        if name not in cls._registry:
-            raise ValueError(f"未注册数据集：'\{name}'")
-        return cls._registry[name]
+        if name in cls._registry:
+            return cls._registry[name]
+
+        return cls._registry["json"]
 
 
 @DatasetRegistry.register("random")
@@ -112,10 +114,40 @@ class DummyDataset(DatasetBase):
         return inputs
 
 
+@DatasetRegistry.register("json")
+class JsonDataset(DatasetBase):
+    """Json 文件数据集类"""
+
+    def __init__(
+        self,
+        dataset: str,
+        max_tokens: int = 1024
+    ) -> None:
+        """初始化虚拟数据集"""
+
+        self.dataset = dataset
+        self.max_tokens = max_tokens
+
+    def generate(self, tokenizer: PreTrainedTokenizer) -> List[Tuple[str, int, int]]:
+        """生成随机数据集"""
+        
+        inputs = []
+        with open(self.dataset, 'r') as file:
+            lines = file.readlines()
+            for line in lines:
+                data = json.loads(line.strip())
+                prompt = data.get("content", None)
+                if prompt:
+                    prompt_len = len(tokenizer.encode(prompt))
+                    inputs.append((prompt, prompt_len, self.max_tokens))
+        return inputs
+
+
 if __name__ == "__main__":
-    # dataset = DummyDataset("请从 1 数到 100：1，2")
-    dataset = RandomDataset()
     tokenizer = AutoTokenizer.from_pretrained("models", trust_remote_code=True)
+    tp = "AdvertiseGen/dev.json"
+    dataset_cls = DatasetRegistry.get_dataset(tp)
+    dataset = dataset_cls(tp)
     requests = dataset.generate(tokenizer)
     for request in requests[:10]:
         print(request)
