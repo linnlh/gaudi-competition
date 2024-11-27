@@ -1,5 +1,6 @@
 import abc
 import aiohttp
+import logging
 import json
 import schemas
 import sys
@@ -9,6 +10,16 @@ import traceback
 from typing import Callable, Dict, Type
 
 AIOHTTP_TIMEOUT = aiohttp.ClientTimeout(total=30)
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler()
+    ]
+)
+
+logger = logging.getLogger(__name__)
 
 class ClientBase(abc.ABC):
     """大模型客户端基类，定义异步完成请求的抽象方法
@@ -79,7 +90,6 @@ class VllmClient(ClientBase):
             schemas.RequestOutput: 请求输出对象，包含生成的文本、延迟时间、成功状态等
         """
         api_url = f"{request.api_url}/v1/completions"
-        print("api url: ", api_url)
         async with aiohttp.ClientSession(timeout=AIOHTTP_TIMEOUT) as session:
             payload = {
                 "model": request.model,
@@ -88,6 +98,7 @@ class VllmClient(ClientBase):
                 "max_tokens": request.max_tokens,
                 "stream": True,
             }
+            logger.debug(payload)
 
             output = schemas.RequestOutput()
             output.prompt_len = request.prompt_len

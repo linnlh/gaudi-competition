@@ -120,19 +120,19 @@ class JsonDataset(DatasetBase):
 
     def __init__(
         self,
-        dataset: str,
+        datasets: str,
         max_tokens: int = 1024
     ) -> None:
         """初始化虚拟数据集"""
 
-        self.dataset = dataset
+        self.datasets = datasets
         self.max_tokens = max_tokens
 
     def generate(self, tokenizer: PreTrainedTokenizer) -> List[Tuple[str, int, int]]:
         """生成随机数据集"""
         
         inputs = []
-        with open(self.dataset, 'r') as file:
+        with open(self.datasets, 'r') as file:
             lines = file.readlines()
             for line in lines:
                 data = json.loads(line.strip())
