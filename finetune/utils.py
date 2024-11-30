@@ -4,12 +4,7 @@ import os
 import datasets
 import peft
 import torch
-
-from transformers import(
-    AutoConfig,
-    AutoTokenizer,
-    AutoModelForCausalLM
-)
+import transformers
 
 
 PROMPT = r"""你是一个广告文案大师，请根据下面的描述帮我写一段广告
@@ -18,30 +13,22 @@ PROMPT = r"""你是一个广告文案大师，请根据下面的描述帮我写�
 ### 广告："""
 
 def create_model(model_args, training_args, finetune_args):
-    """创建模型
+    if not os.path.isabs(model_args.model_name_or_path):
+        raise ValueError("当前模型路径只支持本地路径以绝对路径的形式传入")
 
-    参数:
-        model_args : 模型参数
-        training_args : 训练参数
-        finetune_args : 微调参数
-
-    返回:
-        模型和分词器
-    """
-
-    model_path = os.path.abspath(model_args.model_path)
-    config = AutoConfig.from_pretrained(
-        model_path,
+    config = transformers.AutoConfig.from_pretrained(
+        model_args.model_name_or_path,
         trust_remote_code=True
     )
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_path,
+    tokenizer = transformers.AutoTokenizer.from_pretrained(
+        model_args.model_name_or_path,
         trust_remote_code=True
     )
+
     model_dtype = torch.bfloat16 if training_args.bf16 else None
-    model = AutoModelForCausalLM.from_pretrained(
-        model_path,
-        from_tf=bool(".ckpt" in model_path),
+    model = transformers.AutoModelForCausalLM.from_pretrained(
+        model_args.model_name_or_path,
+        from_tf=bool(".ckpt" in model_args.model_name_or_path),
         config=config,
         trust_remote_code=True,
         torch_dtype=model_dtype,
@@ -60,22 +47,12 @@ def create_model(model_args, training_args, finetune_args):
             task_type=peft.TaskType.CAUSAL_LM,
         )
         model = peft.get_peft_model(model, peft_config)
-        if training_args.bf16:
+        if training_args.bf16 and finetune_args.peft_type != "ia3":
             model = model.to(torch.bfloat16)
         model.print_trainable_parameters()
     return model, tokenizer
 
-
 def create_prompts(examples):
-    """创建提示词
-
-    参数:
-        examples : 数据样本列表
-
-    返回:
-        包含源提示和目标结果的字典
-    """
-
     prompts = {}
     prompts["source"] = []
     prompts["target"] = []
@@ -87,16 +64,9 @@ def create_prompts(examples):
             prompts["target"].append(summary)
     return prompts
 
-
 def create_dataset(data_args):
-    """创建数据集
-
-    参数:
-        data_args : 数据参数
-
-    返回:
-        包含训练和验证数据集的字典
-    """
+    if data_args.dataset_name is not None:
+        raise ValueError("当前暂不支持从 huggingface hub 上下载数据集")
     
     extension = "json"
     raw_datasets = datasets.load_dataset(
@@ -116,20 +86,8 @@ def create_dataset(data_args):
     
     return raw_datasets
 
-
 # TODO: 优化初始化数据集函数
 def preprocess_func(examples, tokenizer, data_args):
-    """数据集预处理函数
-
-    参数:
-        examples : 数据样本字典
-        tokenizer : 分词器
-        data_args : 数据参数
-
-    返回:
-        包含预处理后的输入ID、注意力掩码和标签的字典
-    """
-
     max_seq_length = data_args.max_seq_length
     keys = list(examples.data.keys())
     st = [s + t for s, t in zip(examples[keys[0]], examples[keys[1]])]
@@ -153,18 +111,7 @@ def preprocess_func(examples, tokenizer, data_args):
 
     return examples_tokenized
 
-
 def concatenate_data(dataset, max_seq_length):
-    """数据拼接
-
-    参数:
-        dataset : 数据集
-        max_seq_length : 最大序列长度
-
-    返回:
-        拼接后的数据集
-    """
-
     concatenated_dataset = {}
     for column in dataset.features:
         concatenated_data = [
@@ -176,7 +123,6 @@ def concatenate_data(dataset, max_seq_length):
         ]
         concatenated_dataset[column] = reshaped_data
     return datasets.Dataset.from_dict(concatenated_dataset)
-
 
 if __name__ == "__main__":
     from args import (

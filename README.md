@@ -11,9 +11,15 @@ bash scripts/install_env.sh
 
 ## Lora 微调
 
+使用预定义好的参数进行 `Lora` 微调，微调完成后的模型文件保存在 `/data/chatgml3-6b-lora`
+
 ```bash
 bash scripts/finetune.sh
 ```
+
+运行结果如下图所示：
+
+![train.png](images/train.png)
 
 ## 模型推理
 
@@ -24,20 +30,21 @@ bash scripts/finetune.sh
 bash scripts/run_vllm_server.sh
 ```
 
-使用 `curl` 命令测试 `vllm` 是否启动正常
+当出现下面图片所示表示 `vllm` 启动成功：
+
+![vllm](images/vllm.png)
+
+使用 `curl` 命令测试 `vllm` 模型服务器是否能够正常推理
 
 ```bash
-curl http://localhost:8000/v1/chat/completions \
+curl http://localhost:8000/v1/completions \
 -H "Content-Type: application/json" \
 -d '{
-  "model": "/data/chatglm3-6b/",
-  "messages": [
-    {"role": "system", "content": "你是广告文案大师，请你根据以下内容帮我生成广告："},
-    {"role": "user", "content": "类型#上衣*材质#牛仔布*颜色#白色*风格#简约*图案#刺绣*衣样式#外套*衣款式#破洞"}
-  ],
+  "model": "/data/chatglm3-6b",
+  "prompt": "请从 1 数到 10：1，2",
   "max_tokens": 150,
   "temperature": 0.7
-}
+}'
 ```
 
 使用脚本文件对数据集中的 `dev.json` 进行推理，运行 [inference.sh](inference/inference.py)
@@ -45,6 +52,9 @@ curl http://localhost:8000/v1/chat/completions \
 ```bash
 bash scripts/inference.sh
 ```
+
+若运行成功，对应的运行效果如图所示：
+![inference](images/inference.png)
 
 可以自行修改推理脚本的参数，在请求速率为 5 req/s 时，对应测试的结果为：
 

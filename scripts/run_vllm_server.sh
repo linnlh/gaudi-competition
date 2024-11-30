@@ -1,6 +1,6 @@
 #!/bin/sh
 
-port=8000
+port=${PORT:-8000}
 
 function wait_for_server() {
     local port=$1
@@ -26,12 +26,12 @@ function wait_for_server() {
 
 function main() {
     vllm serve /data/chatglm3-6b \
+        --port $port \
         --enable-lora \
-        # --port $port \
         --lora-module advgen=/data/chatglm3-6b-lora \
         --dtype=bfloat16 \
-        --trust_remote_code
-    wait_for_server $port
+        --trust-remote-code
+    # wait_for_server $port
 }
 
 main $@

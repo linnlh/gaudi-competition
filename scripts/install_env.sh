@@ -39,6 +39,7 @@ function install_pypi() {
     pip install -r requirements.txt
     setup_proxy
     pip install git+https://github.com/HabanaAI/vllm-hpu-extension.git@250622e752917ab4d35131ac85ab1f6eef8043a9
+    pip install git+https://github.com/HabanaAI/vllm-fork.git@96467d8acf14e2c137e27a601aba161e11363c48#egg=vllm
     unset_proxy
 }
 
@@ -46,7 +47,7 @@ function main() {
     update_driver
     install_pypi
     download_model
-    download_dataset
+    # download_dataset
 }
 
 main $@

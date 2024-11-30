@@ -37,8 +37,7 @@ import utils
 
 # 初始化日志系统
 logging.basicConfig(
-    format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
-    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
     datefmt="%m/%d/%Y %H:%M:%S",
     handlers=[logging.StreamHandler(sys.stdout)],
 )
@@ -46,7 +45,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 os.environ["WANDB_DISABLED"] = "true"
-
 
 def main():
     parser = HfArgumentParser(
@@ -57,18 +55,35 @@ def main():
             args.FinetuneArguments,
         )
     )
-    model_args, data_args, training_args, finetune_args = (
-        parser.parse_args_into_dataclasses()
-    )
 
+    # 如果传入 json 文件，则参数从 json 文件中解析，
+    # 否则解析命令行参数
+    if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
+        model_args, data_args, training_args, finetune_args = parser.parse_json_file(
+            json_file=os.path.abspath(sys.argv[1])
+        )
+    else:
+        (
+            model_args,
+            data_args,
+            training_args,
+            finetune_args,
+        ) = parser.parse_args_into_dataclasses()
+
+    # 日志训练参数信息
+    b16 = training_args.fp16 or training_args.bf16
+    logger.setLevel(
+        logging.INFO if is_main_process(training_args.local_rank) else logging.WARN
+    )
+    logger.warning(
+        f"Process rank: {training_args.local_rank}, device: {training_args.device}, "
+        + f"distributed training: {bool(training_args.local_rank != -1)}, 16-bits training: {b16}"
+    )
     if is_main_process(training_args.local_rank):
         transformers.utils.logging.set_verbosity_info()
         transformers.utils.logging.enable_default_handler()
         transformers.utils.logging.enable_explicit_format()
-    logger.info(f"Training Parameters: {training_args}")
-
-    # 日志训练参数信息
-    b16 = training_args.fp16 or training_args.bf16
+    logger.info(f"Training/evaluation parameters {training_args}")
 
     # 初始化随机数种子
     set_seed(training_args.seed)

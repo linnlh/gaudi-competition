@@ -3,10 +3,10 @@
 mkdir -p /data/chatglm3-6b-lora
 
 export PYTORCH_JIT=0
-LOWER_LIST=scripts/ops_bf16.txt python3 scripts/finetune.py \
+LOWER_LIST=scripts/ops_bf16.txt python3 finetune/finetune.py \
     --model_name_or_path /data/chatglm3-6b \
-    --train_file /data/AdvertiseGen/train.json \
-    --validation_file /data/AdvertiseGen/dev.json \
+    --train_file AdvertiseGen/train.json \
+    --validation_file AdvertiseGen/dev.json \
     --bf16 True \
     --output_dir /data/chatglm3-6b-lora \
     --num_train_epochs 1 \

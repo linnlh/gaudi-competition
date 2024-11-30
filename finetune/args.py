@@ -1,31 +1,35 @@
 from dataclasses import dataclass, field
 from typing import Optional, List
 
-
 @dataclass
 class ModelArguments:
     """
-    与模型/配置/分词器相关的参数，用于微调或预训练
+    Arguments pertaining to which model/config/tokenizer
+    we are going to fine-tune, or train from scratch.
     """
 
-    model_path: str = field(
-        metadata={"help": "用于权重初始化的模型检查点。此参数为必填项。"},
-    )
-    config_path: Optional[str] = field(
+    model_name_or_path: Optional[str] = field(
         default=None,
-        metadata={"help": "预训练配置路径，默认与模型路径相同"},
+        metadata={
+            "help": "The model checkpoint for weights initialization."
+            "Don't set if you want to train a model from scratch."
+        },
     )
-    tokenizer_path: Optional[str] = field(
+    config_name: Optional[str] = field(
         default=None,
-        metadata={"help": "预训练分词器路径，默认与模型路径相同"},
+        metadata={"help": "Pretrained config name or path if not the same as model_name"},
+    )
+    tokenizer_name: Optional[str] = field(
+        default=None,
+        metadata={"help": "Pretrained tokenizer name or path if not the same as model_name"},
     )
     trust_remote_code: bool = field(
         default=False,
         metadata={
             "help": (
-                "是否信任来自Hub上定义的数据集/模型的代码执行。"
-                "此选项仅应在信任的仓库中设置为`True`，并且您已经"
-                "阅读了其中的代码，因为它将在本地机器上执行Hub上的代码。"
+                "Whether to trust the execution of code from datasets/models defined on the Hub."
+                " This option should only be set to `True` for repositories you trust and in which you have read the"
+                " code, as it will execute code present on the Hub on your local machine."
             )
         },
     )
@@ -42,17 +46,61 @@ class ModelArguments:
         default=False,
         metadata={
             "help": (
-                "创建模型时是否将其作为空壳，然后在加载预训练权重时才具体化其参数。"
-                "当设置为True时，它将有利于LLM的加载时间和RAM消耗。"
+                "It is an option to create the model as an empty shell, then only materialize its parameters when the pretrained weights are loaded."
+                "When set to True, it will benefit LLM loading time and RAM consumption."
             )
+        },
+    )
+    attn_softmax_bf16: bool = field(
+        default=False,
+        metadata={
+            "help": (
+                "Whether to run attention softmax layer in bf16 precision for fine-tuning. The current support is limited to Llama only."
+            )
+        },
+    )
+    use_flash_attention: bool = field(
+        default=False,
+        metadata={
+            "help": (
+                "Whether to use Habana flash attention for fine-tuning. The current support is limited to Llama only."
+            )
+        },
+    )
+    flash_attention_recompute: bool = field(
+        default=False,
+        metadata={
+            "help": (
+                "Whether to enable recompute in Habana flash attention for fine-tuning."
+                " It is applicable only when use_flash_attention is True."
+            )
+        },
+    )
+    flash_attention_causal_mask: bool = field(
+        default=False,
+        metadata={
+            "help": (
+                "Whether to enable causal mask in Habana flash attention for fine-tuning."
+                " It is applicable only when use_flash_attention is True."
+            )
+        },
+    )
+    flash_attention_fp8: bool = field(
+        default=False,
+        metadata={"help": ("Whether to enable flash attention in FP8.")},
+    )
+    use_fused_rope: bool = field(
+        default=True,
+        metadata={
+            "help": ("Whether to use Habana fused-rope for fine-tuning. The current support is limited to Llama only.")
         },
     )
     load_meta_device: bool = field(
         default=False,
         metadata={
             "help": (
-                "是否将模型加载到设备而不是主机，从而减少主机RAM的使用。"
-                "https://hf-mirror.com/blog/accelerate-large-models"
+                "It is an option to load the model to the device instead of the host, so it can reduce the host RAM usage."
+                "https://huggingface.co/blog/accelerate-large-models"
             )
         },
     )
@@ -64,14 +112,18 @@ class DataArguments:
     Arguments pertaining to what data we are going to input our model for training and eval.
     """
 
-    train_file: Optional[str] = field(
-        default=None, metadata={"help": "The input training data file (a text file)."}
+    dataset_name: Optional[str] = field(
+        default=None,
+        metadata={"help": "The name of the dataset to use (via the datasets library)."},
     )
+    dataset_config_name: Optional[str] = field(
+        default=None,
+        metadata={"help": "The configuration name of the dataset to use (via the datasets library)."},
+    )
+    train_file: Optional[str] = field(default=None, metadata={"help": "The input training data file (a text file)."})
     validation_file: Optional[str] = field(
         default=None,
-        metadata={
-            "help": "An optional input evaluation data file to evaluate the perplexity on (a text file)."
-        },
+        metadata={"help": "An optional input evaluation data file to evaluate the perplexity on (a text file)."},
     )
     max_seq_length: Optional[int] = field(
         default=512,
@@ -113,13 +165,10 @@ class DataArguments:
     )
     keep_in_memory: bool = field(
         default=False,
-        metadata={
-            "help": "Whether to keep in memory the loaded dataset. Defaults to False."
-        },
+        metadata={"help": "Whether to keep in memory the loaded dataset. Defaults to False."},
     )
     keep_linebreaks: bool = field(
-        default=True,
-        metadata={"help": "Whether to keep line breaks when using TXT files or not."},
+        default=True, metadata={"help": "Whether to keep line breaks when using TXT files or not."}
     )
     dataset_seed: int = field(
         default=42,
@@ -135,9 +184,7 @@ class DataArguments:
     )
     dataset_concatenation: Optional[bool] = field(
         default=False,
-        metadata={
-            "help": "Whether to concatenate the sentence for more efficient training."
-        },
+        metadata={"help": "Whether to concatenate the sentence for more efficient training."},
     )
     sql_prompt: bool = field(
         default=False,
@@ -148,8 +195,7 @@ class DataArguments:
         metadata={"help": "Whether to have a chat style prompt."},
     )
     save_last_ckpt: bool = field(
-        default=True,
-        metadata={"help": "Whether to save checkpoint at the end of the training."},
+        default=True, metadata={"help": "Whether to save checkpoint at the end of the training."}
     )
     instruction_column_name: Optional[str] = field(
         default=None,
@@ -172,7 +218,6 @@ class DataArguments:
             "'output' column is used for non-SQL prompts and the 'answer' column is used for SQL prompts."
         },
     )
-
 
 @dataclass
 class FinetuneArguments:
@@ -210,9 +255,7 @@ class FinetuneArguments:
     )
     adalora_tinit: int = field(
         default=50,
-        metadata={
-            "help": "Number of warmup steps for AdaLoRA wherein no pruning is performed"
-        },
+        metadata={"help": "Number of warmup steps for AdaLoRA wherein no pruning is performed"},
     )
     adalora_tfinal: int = field(
         default=100,

@@ -114,6 +114,11 @@ class DummyDataset(DatasetBase):
         return inputs
 
 
+PROMPT = r"""你是一个广告文案大师，请根据下面的描述帮我写一段广告
+
+### 描述：{content}
+### 广告："""
+
 @DatasetRegistry.register("json")
 class JsonDataset(DatasetBase):
     """Json 文件数据集类"""
@@ -121,7 +126,8 @@ class JsonDataset(DatasetBase):
     def __init__(
         self,
         datasets: str,
-        max_tokens: int = 1024
+        max_tokens: int = 1024,
+        **kwargs: Dict[str, Any]
     ) -> None:
         """初始化虚拟数据集"""
 
@@ -137,6 +143,7 @@ class JsonDataset(DatasetBase):
             for line in lines:
                 data = json.loads(line.strip())
                 prompt = data.get("content", None)
+                prompt = PROMPT.format(content=prompt)
                 if prompt:
                     prompt_len = len(tokenizer.encode(prompt))
                     inputs.append((prompt, prompt_len, self.max_tokens))
