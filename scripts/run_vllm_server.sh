@@ -2,37 +2,9 @@
 
 port=8000
 
-function usage() {
-    echo "TODO: filling the usage"
-}
-
-function parse_args() {
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --model | -m)
-                model=$2
-                shift 2
-                ;;
-            --port | -p)
-                port=$2
-                shift 2
-                ;;
-            --help)
-                usage
-                shift
-                ;;
-            *)
-                echo "Invalid option: $1"
-                usage
-                exit 1
-                ;;
-        esac
-    done
-}
-
 function wait_for_server() {
     local port=$1
-    local timeout=${2:-30}
+    local timeout=${2:-300}
     local start_time=$(date +%s)
     local health_url="http://127.0.0.1:$port/health"
 
@@ -53,8 +25,12 @@ function wait_for_server() {
 }
 
 function main() {
-    parse_args $@
-    # vllm serve $model
+    vllm serve /data/chatglm3-6b \
+        --enable-lora \
+        # --port $port \
+        --lora-module advgen=/data/chatglm3-6b-lora \
+        --dtype=bfloat16 \
+        --trust_remote_code
     wait_for_server $port
 }
 
